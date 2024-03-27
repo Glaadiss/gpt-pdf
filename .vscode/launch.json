@@ -1,0 +1,19 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "debug streamlit",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "program": ".venv/bin/streamlit",  // /home/xx/tmp/venv/bin/streamlit",
+            "args": [
+                "run",
+                "app.py",
+                "--server.port",
+                "8000",
+            ]
+        }
+    ]
+}
