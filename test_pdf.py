@@ -1,18 +1,20 @@
 import os
 import re
 
-import dotenv
+# import dotenv
 import openai
 from langchain.chat_models import ChatOpenAI
 from openai import OpenAI
 from utils import convert_pdf_to_images
+import streamlit as st
 
-dotenv.load_dotenv()
-openai.api_key = os.environ["OPENAI_API_KEY"]
+# dotenv.load_dotenv()
+# openai.api_key = os.environ["OPENAI_API_KEY"]
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 import os
 
-import dotenv
+# import dotenv
 import openai
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
