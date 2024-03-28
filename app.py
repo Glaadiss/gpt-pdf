@@ -1,7 +1,7 @@
 import streamlit as st
 
 from utils import convert_pdf_to_images
-from test_pdf import answer_question, get_retriever
+from test_pdf import answer_question, get_retriever, get_text_chunks_langchain
 
 st.title("Podsumowanie pliku PDF")
 
@@ -19,29 +19,37 @@ def on_change():
 
 
 with st.sidebar:
-    uploaded_file = st.file_uploader(
-        "Choose a file", on_change=on_change, label_visibility="hidden"
+    uploaded_files = st.file_uploader(
+        "Choose a file",
+        on_change=on_change,
+        label_visibility="hidden",
+        accept_multiple_files=True,
     )
 
 
-if uploaded_file and st.session_state.file_loaded:
+if uploaded_files and st.session_state.file_loaded:
     st.session_state.messages = []
-    with st.spinner("Plik jest przetwarzany..."):
-        text = convert_pdf_to_images(uploaded_file)
-    st.session_state.context = text
+    all_docs = []
+    all_summaries = []
+    with st.spinner("Indeksuje pliki..."):
+        for uploaded_file in uploaded_files:
+            text = convert_pdf_to_images(uploaded_file)
+            docs, summaries = get_text_chunks_langchain(text, uploaded_file.name)
+            all_docs.extend(docs)
+            all_summaries.extend(summaries)
 
-    st.session_state.retriever = get_retriever(text)
-
-    with st.empty():
-        with st.chat_message("assistant"):
-            response = st.write_stream(
-                answer_question(
-                    st.session_state.retriever,
-                    "O czym jest ten plik? Opisz w 3/4 zdaniach.",
-                )
-            )
-        st.write("")
-    st.session_state.messages.append({"role": "ai", "content": response})
+        st.session_state.retriever = get_retriever(all_docs)
+        st.session_state.retriever_summary = get_retriever(all_summaries)
+    # with st.empty():
+    #     with st.chat_message("assistant"):
+    #         response = st.write_stream(
+    #             answer_question(
+    #                 st.session_state.retriever,
+    #                 "O czym jest ten plik? Opisz w 3/4 zdaniach.",
+    #             )
+    #         )
+    #     st.write("")
+    # st.session_state.messages.append({"role": "ai", "content": response})
     st.session_state.messages.append(
         {"role": "ai", "content": "O co chciałbyś zapytać?"}
     )
@@ -62,5 +70,14 @@ if prompt := st.chat_input("Zadaj pytanie odnośnie pliku PDF"):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("assistant"):
-        message = st.write_stream(answer_question(st.session_state.retriever, prompt))
+        streamer, meta = answer_question(
+            st.session_state.retriever,
+            prompt,
+            retriever_summaries=st.session_state.retriever_summary,
+            stream=True,
+        )
+        src = f"**Źródło: {meta['source']}** \n\n" if meta["source"] else ""
+        st.write(src)
+        message = st.write_stream(streamer)
+    message = src + message
     st.session_state.messages.append({"role": "ai", "content": message})
