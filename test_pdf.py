@@ -3,26 +3,28 @@ import re
 
 # import dotenv
 import openai
-from langchain_openai import OpenAI
+from langchain.chat_models import ChatOpenAI
+from openai import OpenAI
 from utils import convert_document_to_text
 import streamlit as st
 
 # dotenv.load_dotenv()
 # openai.api_key = os.environ["OPENAI_API_KEY"]
 openai.api_key = st.secrets["OPENAI_API_KEY"]
+
 import os
 
 # import dotenv
+import openai
+from langchain.chat_models import ChatOpenAI
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.llms import OpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.document import Document
 from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import FAISS
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-
-from langchain_openai import ChatOpenAI
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.llms import OpenAI
-from langchain_community.vectorstores import FAISS
 
 
 def remove_redundant_tabs_newlines(text):
