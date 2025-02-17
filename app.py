@@ -1,6 +1,6 @@
 import streamlit as st
 
-from utils import convert_pdf_to_images
+from utils import convert_document_to_text
 from test_pdf import answer_question, get_retriever, get_text_chunks_langchain
 
 st.title("Podsumowanie pliku PDF")
@@ -33,7 +33,8 @@ if uploaded_files and st.session_state.file_loaded:
     all_summaries = []
     with st.spinner("Indeksuje pliki..."):
         for uploaded_file in uploaded_files:
-            text = convert_pdf_to_images(uploaded_file)
+            file_type = uploaded_file.name.split(".")[-1]
+            text = convert_document_to_text(uploaded_file, file_type)
             docs, summaries = get_text_chunks_langchain(text, uploaded_file.name)
             all_docs.extend(docs)
             all_summaries.extend(summaries)

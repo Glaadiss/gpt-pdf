@@ -1,59 +1,77 @@
 import io  # io fo
 import os
+import docx
 
 import fitz  # PyMuPDF for handling PDF files
 import pytesseract  # pytesseract for OCR
 from PIL import Image  # Pillow for image processing
 
+
 os.environ["TESSDATA_PREFIX"] = "./tessdata"
 
 
-def convert_pdf_to_images(pdf):
-    # Reopen the PDF file
-    doc = fitz.open(stream=pdf.read(), filetype="pdf")
+def extract_text_from_pdf(pdf_file):
+    """Extract text from a PDF file, including OCR for images."""
+    full_ocr_result = ""
 
-    switch_to_ocr_full_page = False
-    # Reinitialize an empty string to store OCR extracted text
-    ocr_text = ""
-    better_ocr_result = ""
-    # Extract images from each page and perform OCR
+    # Open the PDF
+    doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
+
+    # Extract images and perform OCR
     for page_num in range(len(doc)):
-        # Get the page
         page = doc.load_page(page_num)
-
         pix = page.get_pixmap()
         img_bytes = pix.tobytes("png")
+
         image = Image.open(io.BytesIO(img_bytes))
-        ocr_result = pytesseract.image_to_string(image, lang="pol")
+        page_text = pytesseract.image_to_string(image, lang="pol")
+        full_ocr_result += page_text + "\n"
 
-        ocr_text += ocr_result
-
-        # Extract images from the page
-        # # Process each image
-        for image_index, img in enumerate(page.get_images(full=True)):
-            # Get the image from the XREF table
+        # Check for embedded images
+        for img in page.get_images(full=True):
             xref = img[0]
             base_image = doc.extract_image(xref)
             image_bytes = base_image["image"]
 
-            # Convert bytes to PIL Image
             try:
                 image = Image.open(io.BytesIO(image_bytes))
+                image_text = pytesseract.image_to_string(image, lang="pol")
+                full_ocr_result += image_text + "\n"
             except Exception as e:
-                switch_to_ocr_full_page = True
-                print(f"Error: {e}")
-                continue
+                print(f"Error processing image on page {page_num}: {e}")
 
-            # image_filename = f"image_{page_num}_{image_index}.png"
-            # with open(image_filename, "wb") as image_file:
-            #     image_file.write(image_bytes)
-            # Perform OCR using pytesseract
-            ocr_result = pytesseract.image_to_string(image, lang="pol")
-
-            better_ocr_result += ocr_result
     doc.close()
+    return full_ocr_result
 
-    return ocr_text if switch_to_ocr_full_page else better_ocr_result
+
+def extract_text_from_docx(docx_file):
+    """Extract text from a DOCX file, including OCR for images."""
+    full_ocr_result = ""
+
+    # Open DOCX and extract text
+    doc = docx.Document(docx_file)
+    for para in doc.paragraphs:
+        full_ocr_result += para.text + "\n"
+
+    # Extract images and perform OCR
+    for rel in doc.part.rels:
+        if "image" in doc.part.rels[rel].target_ref:
+            image_data = doc.part.rels[rel].target_part.blob
+            try:
+                image = Image.open(io.BytesIO(image_data))
+                image_text = pytesseract.image_to_string(image, lang="pol")
+                full_ocr_result += image_text + "\n"
+            except Exception as e:
+                print(f"Error processing image in DOCX: {e}")
+
+    return full_ocr_result
 
 
-# text = convert_pdf_to_images("example.pdf")
+def convert_document_to_text(file, file_type):
+
+    if file_type == "pdf":
+        return extract_text_from_pdf(file)
+    elif file_type == "docx":
+        return extract_text_from_docx(file)
+    else:
+        raise ValueError("Unsupported file type. Use 'pdf' or 'docx'.")
